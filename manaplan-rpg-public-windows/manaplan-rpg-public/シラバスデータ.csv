@@ -98,15 +98,15 @@ GE242,G1111V2043,English for Specific Fields(43),木,3,7,1,G4-52,1,英語,2
 GE242,G1111V2044,English for Specific Fields(44),木,3,7,1,G4-21,1,英語,2
 GE242,G1111V2045,English for Specific Fields(45),木,3,7,1,G5-51,1,英語,2
 GE243,G1111V3006,CALL2(6),集,0,8,1,メディア,2,英語,2
-GE132,G1111V3026,Presentation(26) / Presentation,水,4,7,1,G4-53,1,英語,1
-GE132,G1111V3027,Presentation(27) / Presentation,水,4,7,1,G5-32,1,英語,1
-GE132,G1111V3028,Presentation(28) / Presentation,水,4,7,1,G5-42,1,英語,1
-GE132,G1111V3029,Presentation(29) / Presentation,水,4,7,1,G5-51,1,英語,1
-GE132,G1111V3030,Presentation(30) / Presentation,水,4,7,1,G5-52,1,英語,1
-GE132,G1111V3031,Presentation(31) / Presentation,水,4,7,1,G5-21,1,英語,1
-GE132,G1111V3032,Presentation(32) / Presentation,水,4,7,1,G4-22,1,英語,1
-GE132,G1111V3033,Presentation(33) / Presentation,水,4,7,1,G5-22,1,英語,1
-GE132,G1111V3034,Presentation(34) / Presentation,水,4,7,1,G4-31,1,英語,1
+GE132,G1111Z3026,Presentation(26) / Presentation,水,4,7,1,G4-53,1,英語,1
+GE132,G1111Z3027,Presentation(27) / Presentation,水,4,7,1,G5-32,1,英語,1
+GE132,G1111Z3028,Presentation(28) / Presentation,水,4,7,1,G5-42,1,英語,1
+GE132,G1111Z3029,Presentation(29) / Presentation,水,4,7,1,G5-51,1,英語,1
+GE132,G1111Z3030,Presentation(30) / Presentation,水,4,7,1,G5-52,1,英語,1
+GE132,G1111Z3031,Presentation(31) / Presentation,水,4,7,1,G5-21,1,英語,1
+GE132,G1111Z3032,Presentation(32) / Presentation,水,4,7,1,G4-22,1,英語,1
+GE132,G1111Z3033,Presentation(33) / Presentation,水,4,7,1,G5-22,1,英語,1
+GE132,G1111Z3034,Presentation(34) / Presentation,水,4,7,1,G4-31,1,英語,1
 GE134,G1111Z7051,Writing(51),月,1,8,1,G5-21,1,英語,1
 GE134,G1111Z7052,Writing(52),月,1,8,1,G4-23,1,英語,1
 GE134,G1111Z7053,Writing(53),月,1,8,1,G4-22,1,英語,1
