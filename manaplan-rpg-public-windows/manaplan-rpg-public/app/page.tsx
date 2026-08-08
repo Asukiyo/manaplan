@@ -855,7 +855,7 @@ export default function Home() {
   return (
     <main className="app-shell">
       <aside className="side-nav" aria-label="メインメニュー">
-        <div className="logo-lockup"><span className="logo-orb">✦</span><div><strong>まなプラン</strong><small>COURSE QUEST</small></div></div>
+        <div className="logo-lockup"><span className="logo-orb">✦</span><div><strong>Campus Quest</strong><small>COURSE QUEST</small></div></div>
         <nav>
           <button className="active" onClick={() => scrollTo("home")}><span>⌂</span>ホーム</button>
           <button onClick={() => scrollTo("courses")}><span>⌕</span>授業探索</button>
@@ -872,7 +872,7 @@ export default function Home() {
 
       <div className="page-content">
         <header className="topbar">
-          <div className="mobile-brand">✦ まなプラン</div>
+          <div className="mobile-brand">✦ Campus Quest</div>
           <div className="topbar-status"><span className="level-pill">★ レベル {level}</span><div className="mini-exp"><i style={{ width: `${Math.min((completedCredits / GRADUATION_CREDITS) * 100, 100)}%` }} /></div><small>EXP {completedCredits}</small></div>
           <button type="button" className="reset-adventure-button" onClick={resetAdventure}>↺ 冒険をリセット</button>
           <button className="notification" onClick={() => setTermPromptOpen(true)} aria-label="学期末イベントを開く">🔔<b>1</b></button>
@@ -884,6 +884,7 @@ export default function Home() {
               <span className="quest-label">{grade ?? 1}年生・{termGroupLabel[adventureTermGroup]}の試練</span>
               <h1>{currentBoss.name} <small>{currentBoss.threat}</small></h1>
               <p>学期の単位を集めて、次のボスを打ち倒そう！</p>
+              <div className="hero-weakness"><span>弱点武器</span><strong>{equipmentCatalog.filter((item) => currentBoss.weakWeaponIds.includes(item.id)).map((item) => `${item.icon} ${item.name}`).join("　")}</strong></div>
             </div>
             <div className="hero-stats glass-panel">
               <span>冒険ステータス</span><strong>{completedCredits} <small>修得済み単位</small></strong>

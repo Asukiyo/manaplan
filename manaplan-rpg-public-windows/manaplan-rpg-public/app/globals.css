@@ -102,6 +102,9 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .hero-copy h1 { margin: 10px 0 7px; font-family: Georgia, "Yu Mincho", serif; font-size: clamp(27px, 3vw, 42px); letter-spacing: .02em; text-shadow: 0 4px 18px rgba(0,0,0,.55); }
 .hero-copy h1 small { font-size: 14px; color: #d6c6ee; }
 .hero-copy p { margin: 0; color: #ded5e8; font-size: 12px; font-weight: 700; }
+.hero-weakness { width: fit-content; max-width: 100%; margin-top: 12px; padding: 7px 10px; display: flex; align-items: center; gap: 9px; border: 1px solid rgba(242,204,125,.42); border-radius: 7px; background: rgba(10,7,23,.68); box-shadow: 0 5px 18px rgba(0,0,0,.22); backdrop-filter: blur(7px); }
+.hero-weakness span { flex: 0 0 auto; color: #e6bd69; font-size: 8px; font-weight: 900; letter-spacing: .08em; }
+.hero-weakness strong { color: #fff5dc; font-size: 9px; line-height: 1.5; }
 .glass-panel { position: absolute; z-index: 3; left: 38px; bottom: 31px; width: 230px; padding: 17px; border: 1px solid rgba(255,255,255,.23); border-radius: 13px; background: rgba(255,255,255,.9); color: #2e2637; box-shadow: 0 12px 30px rgba(5,4,14,.23); backdrop-filter: blur(14px); }
 .hero-stats > span { color: #736a7d; font-size: 9px; font-weight: 900; }
 .hero-stats > strong { display: block; margin-top: 2px; font-size: 27px; }

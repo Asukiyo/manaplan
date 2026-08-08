@@ -3,7 +3,7 @@ import "./globals.css";
 import "./title.css";
 
 export const metadata: Metadata = {
-  title: "まなプラン｜卒業クエスト",
+  title: "Campus Quest｜卒業クエスト",
   description: "履修登録と単位管理を冒険に変える、RPG風の履修サポートサイトです。",
   icons: {
     icon: "/favicon.svg",
