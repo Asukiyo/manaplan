@@ -50,6 +50,7 @@ import {
 } from "@/features/battle/semesterBattle";
 import { answerAdviser } from "@/features/chatbot/adviser";
 import { TitleScreen } from "@/components/title/TitleScreen";
+import { CreditSimulator, QuestionLibrary } from "@/components/chat/AdviserTools";
 import {
   evaluateGraduation,
   GRADUATION_CREDITS,
@@ -127,7 +128,6 @@ const periods = [
 
 const termsForFilter = (term: string) => term === "7" ? ["7", "1", "2"] : term === "8" ? ["8", "4", "5"] : [term];
 
-const quickQuestions = ["130単位の卒業要件を教えて", "数理DS展開の超過分は教養展開に回せる？", "コース選択はいつ？", "時間割が重複していませんか？"];
 const termGroupLabel: Record<TermGroup, string> = { first: "1〜2ターム", second: "4〜5ターム" };
 const SECOND_YEAR_PROMOTION_LINE = 65;
 const CONTACT_FORM_URL = "https://docs.google.com/forms/d/1G5JDKzcsD9LUnuXKrE8dO-9dvyyo2TlxdKeIlqEjpWY/viewform?hl=ja";
@@ -193,7 +193,13 @@ export default function Home() {
     setCompletedCredits(saved.completedCredits);
     setLatestGpa(saved.latestGpa);
     setEquipment(saved.equipment);
-    setRegistered(saved.registered);
+    const callIds = saved.grade === 1
+      ? autoRequiredCourseIdsForYear(1, saved.studyCourse).filter((id) => {
+        const course = courses.find((item) => item.id === id);
+        return course ? /^CALL\(/iu.test(course.name) && !saved.completedCourseKeys.includes(courseFamilyKey(course)) : false;
+      })
+      : [];
+    setRegistered(Array.from(new Set([...saved.registered, ...callIds])));
     setCompletedCourseKeys(saved.completedCourseKeys);
     setFailedCourseKeys(saved.failedCourseKeys);
     setActiveTimetableGroup(saved.activeTimetableGroup);
@@ -936,10 +942,12 @@ export default function Home() {
                 {messages.length === 0 && <div className="message bot">困ったときは、ここで質問してくださいね。</div>}
                 {messages.slice(-5).map((message, index) => <div className={`message ${message.role}`} key={`${message.role}-${index}`}>{message.text}</div>)}
               </div>
-              <div className="quick-questions">{quickQuestions.map((question) => <button key={question} onClick={() => ask(question)}>{question}</button>)}</div>
+              <QuestionLibrary onAsk={ask} />
               <form className="chat-form" onSubmit={(event) => { event.preventDefault(); ask(chatInput); }}><input value={chatInput} onChange={(event) => setChatInput(event.target.value)} placeholder="質問を入力…" aria-label="賢者への質問" /><button aria-label="送信">➤</button></form>
             </aside>
           </div>
+
+          <CreditSimulator completedCredits={completedCredits} grade={grade ?? 1} termGroup={adventureTermGroup} registeredCourses={selectedCourses} />
 
           <section className="panel timetable-panel" id="timetable">
             <div className="section-heading"><div><span className="eyebrow">WEEKLY MAP</span><h2>冒険の時間割</h2></div><button className="text-button danger" onClick={() => {

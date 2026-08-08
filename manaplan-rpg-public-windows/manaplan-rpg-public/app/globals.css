@@ -202,9 +202,52 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .message { max-width: 90%; padding: 8px 10px; border-radius: 10px; font-size: 9px; line-height: 1.55; white-space: pre-line; }
 .message.bot { align-self: flex-start; border-bottom-left-radius: 3px; background: #f0ebf6; }
 .message.user { align-self: flex-end; border-bottom-right-radius: 3px; background: #7245d1; color: #fff; }
-.quick-questions { padding: 4px 15px 10px; display: flex; flex-direction: column; gap: 5px; }
+.question-library { padding: 5px 15px 10px; border-top: 1px solid #eee8f1; font-family: var(--font-geist-sans), "Noto Sans JP", sans-serif; }
+.question-library > header { min-height: 34px; display: flex; align-items: center; justify-content: space-between; }
+.question-library > header strong { color: #564d60; font-size: 9px; }
+.question-library > header strong span { margin-left: 5px; color: #8c7d98; font-size: 7px; font-weight: 700; }
+.question-library > header button { width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid #d9cdea; border-radius: 50%; background: #f5f0fd; color: #7042c4; font: 500 17px/1 var(--font-geist-sans), sans-serif; cursor: pointer; }
+.question-library > header button:hover { border-color: #8d6dce; background: #ece3fb; }
+.question-category-picker { margin: 0 0 8px; padding: 7px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 5px; border: 1px solid #e7dfeb; border-radius: 10px; background: #faf8fc; }
+.question-category-picker button { min-width: 0; min-height: 43px; padding: 6px 7px; display: grid; grid-template-columns: 21px minmax(0,1fr); grid-template-rows: auto auto; align-items: center; column-gap: 6px; border: 1px solid #ded4e5; border-radius: 8px; background: #fff; color: #756a7e; font-family: inherit; text-align: left; cursor: pointer; }
+.question-category-picker button > span { grid-row: 1/3; width: 21px; height: 21px; display: grid; place-items: center; border-radius: 6px; background: #f0e9fa; color: #7449c5; font-size: 10px; font-weight: 900; }
+.question-category-picker button b { overflow: hidden; color: #5f5369; font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
+.question-category-picker button small { overflow: hidden; color: #9a8fa1; font-size: 6px; text-overflow: ellipsis; white-space: nowrap; }
+.question-category-picker button.active { border-color: #7750c4; background: #eee7fb; color: #663ab7; }
+.quick-questions { display: flex; flex-direction: column; gap: 5px; }
 .quick-questions button { min-height: 30px; padding: 0 10px; border: 1px solid #e1d9e6; border-radius: 15px; background: #fff; color: #6b6074; font-size: 8px; text-align: left; cursor: pointer; }
 .quick-questions button:hover { border-color: #a88cda; color: #623ab1; }
+.credit-simulator-panel { margin-top: 17px; padding: 22px 25px; display: grid; grid-template-columns: minmax(330px,1.25fr) 180px minmax(280px,1fr); align-items: center; gap: 28px; overflow: hidden; background: radial-gradient(circle at 45% 10%, rgba(129,78,213,.09), transparent 35%), #fff; }
+.credit-sim-copy h2 { margin: 5px 0 7px; font-size: 17px; }
+.credit-sim-copy > p { margin: 0 0 13px; color: var(--muted); font-size: 9px; line-height: 1.65; }
+.credit-category-actions { margin-bottom: 7px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.credit-category-actions > span { color: #5f5568; font-size: 8px; font-weight: 850; }
+.credit-category-actions > div { display: flex; gap: 4px; }
+.credit-category-actions button { min-height: 24px; padding: 0 7px; border: 1px solid #dcd1e5; border-radius: 7px; background: #fff; color: #6c4aaa; font-size: 7px; font-weight: 800; cursor: pointer; }
+.credit-category-controls { max-height: 215px; overflow-y: auto; display: grid; gap: 6px; padding-right: 3px; scrollbar-width: thin; }
+.credit-category-controls > p { margin: 5px 0; padding: 13px; border: 1px dashed #dcd2e3; border-radius: 9px; color: #8d8295; font-size: 8px; line-height: 1.6; }
+.credit-category-controls label { padding: 7px 8px; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 4px 9px; border: 1px solid #ebe5ee; border-radius: 9px; background: #fbfafc; color: #5f5568; font-size: 8px; font-weight: 800; }
+.credit-category-controls label > span { min-width: 0; display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.credit-category-controls label i { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; }
+.credit-category-controls output { color: #6b3dc0; font-size: 8px; font-weight: 950; }
+.credit-category-controls input[type="range"] { grid-column: 1/-1; width: 100%; margin: 1px 0 0; accent-color: #7545cd; cursor: pointer; }
+.credit-donut { position: relative; width: 164px; height: 164px; display: grid; place-items: center; justify-self: center; }
+.credit-donut svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.credit-donut circle { fill: none; stroke-width: 10; }
+.credit-ring-track { stroke: #e9e5ef; }
+.credit-ring-segment { stroke-linecap: butt; }
+.credit-donut > div { position: relative; z-index: 1; text-align: center; }
+.credit-donut strong { display: block; color: #56318f; font: 950 27px var(--font-geist-mono), monospace; }
+.credit-donut strong small { font-size: 12px; }
+.credit-donut span { display: block; margin-top: 2px; color: #8b8194; font-size: 8px; }
+.credit-sim-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+.credit-sim-summary > div { padding: 11px 8px; border: 1px solid #e8e1ec; border-radius: 11px; background: #faf8fc; }
+.credit-sim-summary > div span { display: block; color: #8c8295; font-size: 7px; }
+.credit-sim-summary > div strong { display: block; margin-top: 4px; color: #44354e; font: 950 18px var(--font-geist-mono), monospace; }
+.credit-sim-summary > div small { margin-left: 2px; color: #8a7b93; font: 700 7px var(--font-geist-sans), sans-serif; }
+.credit-sim-summary > p { grid-column: 1/-1; margin: 2px 1px 0; color: #756b7e; font-size: 8px; line-height: 1.6; }
+@media (max-width: 980px) { .credit-simulator-panel { grid-template-columns: 1fr 160px; }.credit-sim-summary { grid-column: 1/-1; } }
+@media (max-width: 620px) { .credit-simulator-panel { padding: 19px; grid-template-columns: 1fr; gap: 17px; }.credit-donut { width: 150px; height: 150px; }.credit-sim-summary { grid-column: auto; } }
 .chat-form { padding: 10px 15px 15px; display: grid; grid-template-columns: 1fr 38px; gap: 6px; }
 .chat-form input { min-width: 0; padding: 0 10px; font-size: 9px; }
 .chat-form button { border: 0; border-radius: 9px; background: #7041ce; color: #fff; cursor: pointer; }

@@ -307,7 +307,7 @@ export const courseIdsForFamilyKeys = (keys: Iterable<string>) => {
 const parallelCourseFamily = courseFamilyName;
 
 const automaticRequirementMatches = (course: Course, studyCourse: StudyCourseTrack | null) => {
-  if (course.requirement === "required") return !/^CALL(?:\d|\()/iu.test(course.name);
+  if (course.requirement === "required") return true;
   if (studyCourse === "information") return course.requirement === "informationRequired";
   if (studyCourse === "dataScience") return course.requirement === "dataScienceRequired";
   return false;
