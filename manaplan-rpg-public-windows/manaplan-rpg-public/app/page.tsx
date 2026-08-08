@@ -69,6 +69,42 @@ type BattleState = {
   resolved: boolean;
 };
 
+type OnboardingStep = "grade" | "course" | "term" | "credits" | "done";
+
+type PersistedGameState = {
+  version: 1;
+  grade: number | null;
+  onboardingStep: OnboardingStep;
+  studyCourse: StudyCourse | null;
+  adventureTermGroup: TermGroup;
+  priorCompletedCourseKeys: string[];
+  earnedFields: CreditLedger;
+  completedCredits: number;
+  latestGpa: number | null;
+  equipment: string[];
+  registered: number[];
+  completedCourseKeys: string[];
+  failedCourseKeys: string[];
+  activeTimetableGroup: TermGroup;
+  termPromptOpen: boolean;
+  coursePromptOpen: boolean;
+  promptShown: boolean;
+  offeringOpen: boolean;
+  offeringTermGroup: TermGroup;
+  offeringGrades: Record<string, AcademicGrade>;
+  battle: BattleState | null;
+  graduationCleared: boolean;
+  graduationClearOpen: boolean;
+};
+
+const SAVE_STORAGE_KEY = "manaplan-rpg-game-state-v1";
+
+function isPersistedGameState(value: unknown): value is PersistedGameState {
+  return typeof value === "object"
+    && value !== null
+    && "version" in value
+    && value.version === 1;
+}
 const requirementMeta: Record<RequirementType, { label: string; color: string; soft: string; rune: string }> = {
   required: { label: "必修", color: "#ed5d8f", soft: "#ffe6ef", rune: "✦" },
   selectRequired: { label: "選択必修", color: "#d27a24", soft: "#fff0cf", rune: "◆" },
@@ -103,7 +139,7 @@ const academicGradeOptions: { value: AcademicGrade; label: string; note: string 
 
 export default function Home() {
   const [grade, setGrade] = useState<number | null>(null);
-  const [onboardingStep, setOnboardingStep] = useState<"grade" | "course" | "term" | "credits" | "done">("grade");
+  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("grade");
   const [studyCourse, setStudyCourse] = useState<StudyCourse | null>(null);
   const [adventureTermGroup, setAdventureTermGroup] = useState<TermGroup>("first");
   const [priorCompletedCourseKeys, setPriorCompletedCourseKeys] = useState<string[]>([]);
@@ -141,7 +177,108 @@ export default function Home() {
   const [battle, setBattle] = useState<BattleState | null>(null);
   const [graduationCleared, setGraduationCleared] = useState(false);
   const [graduationClearOpen, setGraduationClearOpen] = useState(false);
+  const [saveLoaded, setSaveLoaded] = useState(false);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        const raw = window.localStorage.getItem(SAVE_STORAGE_KEY);
+        if (!raw) return;
+
+        const saved: unknown = JSON.parse(raw);
+        if (!isPersistedGameState(saved)) return;
+
+        setGrade(saved.grade);
+        setOnboardingStep(saved.onboardingStep);
+        setStudyCourse(saved.studyCourse);
+        setAdventureTermGroup(saved.adventureTermGroup);
+        setPriorCompletedCourseKeys(saved.priorCompletedCourseKeys);
+        setEarnedFields(saved.earnedFields);
+        setCompletedCredits(saved.completedCredits);
+        setLatestGpa(saved.latestGpa);
+        setEquipment(saved.equipment);
+        setRegistered(saved.registered);
+        setCompletedCourseKeys(saved.completedCourseKeys);
+        setFailedCourseKeys(saved.failedCourseKeys);
+        setActiveTimetableGroup(saved.activeTimetableGroup);
+        setTermPromptOpen(saved.termPromptOpen);
+        setCoursePromptOpen(saved.coursePromptOpen);
+        setPromptShown(saved.promptShown);
+        setOfferingOpen(saved.offeringOpen);
+        setOfferingTermGroup(saved.offeringTermGroup);
+        setOfferingGrades(saved.offeringGrades);
+        setBattle(saved.battle);
+        setGraduationCleared(saved.graduationCleared);
+        setGraduationClearOpen(saved.graduationClearOpen);
+      } catch {
+        // 壊れたセーブデータは無視して初期状態で開始する。
+      } finally {
+        setSaveLoaded(true);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!saveLoaded) return;
+
+    const state: PersistedGameState = {
+      version: 1,
+      grade,
+      onboardingStep,
+      studyCourse,
+      adventureTermGroup,
+      priorCompletedCourseKeys,
+      earnedFields,
+      completedCredits,
+      latestGpa,
+      equipment,
+      registered,
+      completedCourseKeys,
+      failedCourseKeys,
+      activeTimetableGroup,
+      termPromptOpen,
+      coursePromptOpen,
+      promptShown,
+      offeringOpen,
+      offeringTermGroup,
+      offeringGrades,
+      battle,
+      graduationCleared,
+      graduationClearOpen,
+    };
+
+    try {
+      window.localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // localStorageが使用できなくてもゲームは続行する。
+    }
+  }, [
+    activeTimetableGroup,
+    adventureTermGroup,
+    battle,
+    completedCourseKeys,
+    completedCredits,
+    coursePromptOpen,
+    earnedFields,
+    equipment,
+    failedCourseKeys,
+    grade,
+    graduationClearOpen,
+    graduationCleared,
+    latestGpa,
+    offeringGrades,
+    offeringOpen,
+    offeringTermGroup,
+    onboardingStep,
+    priorCompletedCourseKeys,
+    promptShown,
+    registered,
+    saveLoaded,
+    studyCourse,
+    termPromptOpen,
+  ]);
   useEffect(() => {
     if (onboardingStep !== "done" || promptShown) return;
     const timer = window.setTimeout(() => {
@@ -568,13 +705,16 @@ export default function Home() {
     setOfferingTermGroup(nextBoss.termGroup);
     const requiredIds = automaticIdsForGrade(nextBoss.grade, studyCourse);
     const requiredClasses = classCountForIds(requiredIds);
-    setRegistered(Array.from(new Set([...retryIds, ...requiredIds])));
+    setRegistered((current) =>
+      Array.from(new Set([...current, ...retryIds, ...requiredIds])),
+    );
     if (nextBoss.grade === 3 && studyCourse === null) setCoursePromptOpen(true);
     setNotice(`${rescuedBySage ? "天才賢者の救援により" : "勝利により"}${nextBoss.grade}年生の${termGroupLabel[nextBoss.termGroup]}へ進行しました。未取得科目を再履修用に残し、同学年の両タームへ必修${requiredClasses}科目を自動登録しました`);
   }
 
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
+  if (!saveLoaded) return null;
   return (
     <main className="app-shell">
       <aside className="side-nav" aria-label="メインメニュー">
