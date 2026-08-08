@@ -49,6 +49,7 @@ import {
   type SemesterBoss,
 } from "@/features/battle/semesterBattle";
 import { answerAdviser } from "@/features/chatbot/adviser";
+import { TitleScreen } from "@/components/title/TitleScreen";
 import {
   evaluateGraduation,
   GRADUATION_CREDITS,
@@ -73,6 +74,7 @@ type OnboardingStep = "grade" | "course" | "term" | "credits" | "done";
 
 type PersistedGameState = {
   version: 1;
+  updatedAt?: string;
   grade: number | null;
   onboardingStep: OnboardingStep;
   studyCourse: StudyCourse | null;
@@ -138,6 +140,7 @@ const academicGradeOptions: { value: AcademicGrade; label: string; note: string 
 ];
 
 export default function Home() {
+  const [screen, setScreen] = useState<"title" | "game">("title");
   const [grade, setGrade] = useState<number | null>(null);
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("grade");
   const [studyCourse, setStudyCourse] = useState<StudyCourse | null>(null);
@@ -178,6 +181,74 @@ export default function Home() {
   const [graduationCleared, setGraduationCleared] = useState(false);
   const [graduationClearOpen, setGraduationClearOpen] = useState(false);
   const [saveLoaded, setSaveLoaded] = useState(false);
+  const [savedGame, setSavedGame] = useState<PersistedGameState | null>(null);
+
+  function applySavedGame(saved: PersistedGameState) {
+    setGrade(saved.grade);
+    setOnboardingStep(saved.onboardingStep);
+    setStudyCourse(saved.studyCourse);
+    setAdventureTermGroup(saved.adventureTermGroup);
+    setPriorCompletedCourseKeys(saved.priorCompletedCourseKeys);
+    setEarnedFields(saved.earnedFields);
+    setCompletedCredits(saved.completedCredits);
+    setLatestGpa(saved.latestGpa);
+    setEquipment(saved.equipment);
+    setRegistered(saved.registered);
+    setCompletedCourseKeys(saved.completedCourseKeys);
+    setFailedCourseKeys(saved.failedCourseKeys);
+    setActiveTimetableGroup(saved.activeTimetableGroup);
+    setTermPromptOpen(saved.termPromptOpen);
+    setCoursePromptOpen(saved.coursePromptOpen);
+    setPromptShown(saved.promptShown);
+    setOfferingOpen(saved.offeringOpen);
+    setOfferingTermGroup(saved.offeringTermGroup);
+    setOfferingGrades(saved.offeringGrades);
+    setBattle(saved.battle);
+    setGraduationCleared(saved.graduationCleared);
+    setGraduationClearOpen(saved.graduationClearOpen);
+  }
+
+  function resetGameState() {
+    setGrade(null);
+    setOnboardingStep("grade");
+    setStudyCourse(null);
+    setAdventureTermGroup("first");
+    setPriorCompletedCourseKeys([]);
+    setPriorCourseSearch("");
+    setEarnedFields(emptyLedger(unitCategories));
+    setCompletedCredits(0);
+    setLatestGpa(null);
+    setEquipment([]);
+    setRegistered([]);
+    setCompletedCourseKeys([]);
+    setFailedCourseKeys([]);
+    setActiveTimetableGroup("first");
+    setTermPromptOpen(false);
+    setCoursePromptOpen(false);
+    setPromptShown(false);
+    setOfferingOpen(false);
+    setOfferingTermGroup("first");
+    setOfferingGrades({});
+    setBattle(null);
+    setGraduationCleared(false);
+    setGraduationClearOpen(false);
+    setNotice("");
+    setDetailCourse(null);
+  }
+
+  function continueAdventure() {
+    if (!savedGame) return;
+    applySavedGame(savedGame);
+    setScreen("game");
+  }
+
+  function startNewAdventure() {
+    if (savedGame && !window.confirm("現在のセーブデータを消して、はじめから冒険しますか？\nこの操作は取り消せません。")) return;
+    window.localStorage.removeItem(SAVE_STORAGE_KEY);
+    setSavedGame(null);
+    resetGameState();
+    setScreen("game");
+  }
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -188,28 +259,7 @@ export default function Home() {
         const saved: unknown = JSON.parse(raw);
         if (!isPersistedGameState(saved)) return;
 
-        setGrade(saved.grade);
-        setOnboardingStep(saved.onboardingStep);
-        setStudyCourse(saved.studyCourse);
-        setAdventureTermGroup(saved.adventureTermGroup);
-        setPriorCompletedCourseKeys(saved.priorCompletedCourseKeys);
-        setEarnedFields(saved.earnedFields);
-        setCompletedCredits(saved.completedCredits);
-        setLatestGpa(saved.latestGpa);
-        setEquipment(saved.equipment);
-        setRegistered(saved.registered);
-        setCompletedCourseKeys(saved.completedCourseKeys);
-        setFailedCourseKeys(saved.failedCourseKeys);
-        setActiveTimetableGroup(saved.activeTimetableGroup);
-        setTermPromptOpen(saved.termPromptOpen);
-        setCoursePromptOpen(saved.coursePromptOpen);
-        setPromptShown(saved.promptShown);
-        setOfferingOpen(saved.offeringOpen);
-        setOfferingTermGroup(saved.offeringTermGroup);
-        setOfferingGrades(saved.offeringGrades);
-        setBattle(saved.battle);
-        setGraduationCleared(saved.graduationCleared);
-        setGraduationClearOpen(saved.graduationClearOpen);
+        setSavedGame(saved);
       } catch {
         // 壊れたセーブデータは無視して初期状態で開始する。
       } finally {
@@ -221,10 +271,11 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!saveLoaded) return;
+    if (!saveLoaded || screen !== "game") return;
 
     const state: PersistedGameState = {
       version: 1,
+      updatedAt: new Date().toISOString(),
       grade,
       onboardingStep,
       studyCourse,
@@ -276,6 +327,7 @@ export default function Home() {
     promptShown,
     registered,
     saveLoaded,
+    screen,
     studyCourse,
     termPromptOpen,
   ]);
@@ -446,6 +498,14 @@ export default function Home() {
     setOnboardingStep(value >= 3 ? "course" : "term");
   }
 
+  function returnToGradeSelection() {
+    setGrade(null);
+    setStudyCourse(null);
+    setPriorCompletedCourseKeys([]);
+    setPriorCourseSearch("");
+    setOnboardingStep("grade");
+  }
+
   function chooseStudyCourse(value: StudyCourse) {
     setStudyCourse(value);
     setOnboardingStep("term");
@@ -567,6 +627,7 @@ export default function Home() {
       remainingCredits,
       registeredCourses: selectedCourses,
       studyCourse,
+      conversation: messages.slice(-6).map((message) => message.text),
     });
     setMessages((current) => [...current, { role: "user", text: clean }, { role: "bot", text: answer }]);
     setChatInput("");
@@ -714,18 +775,30 @@ export default function Home() {
 
   function resetAdventure() {
     const confirmed = window.confirm(
-      "冒険データをリセットして、最初からやり直しますか？\nこの操作は取り消せません。",
+      "セーブデータを削除して、タイトル画面に戻りますか？\nこの操作は取り消せません。",
     );
     if (!confirmed) return;
 
-    try {
-      window.localStorage.removeItem(SAVE_STORAGE_KEY);
-    } finally {
-      window.location.reload();
-    }
+    window.localStorage.removeItem(SAVE_STORAGE_KEY);
+    setSavedGame(null);
+    resetGameState();
+    setScreen("title");
   }
 
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  if (screen === "title") return (
+    <TitleScreen
+      loaded={saveLoaded}
+      save={savedGame ? {
+        grade: savedGame.grade,
+        term: termGroupLabel[savedGame.adventureTermGroup],
+        updatedAt: savedGame.updatedAt,
+      } : null}
+      onContinue={continueAdventure}
+      onStart={startNewAdventure}
+    />
+  );
 
   if (!saveLoaded) return null;
   return (
@@ -932,7 +1005,7 @@ export default function Home() {
             </div>
             {detailMaps.length ? <div className="campus-map-grid">
               {detailMaps.map((map) => <figure className="campus-map-card" key={map.key}>
-                <figcaption><strong>{map.label}</strong><small>CSV表記：{detailCourse.location}</small></figcaption>
+                <figcaption><strong>{map.label}</strong><small>授業場所：{detailCourse.location}</small></figcaption>
                 <a href={map.image} target="_blank" rel="noreferrer" aria-label={`${map.label}の地図を拡大表示`}>
                   <img src={map.image} alt={`${map.label}の位置を丸で示したキャンパスマップ`} loading="lazy" />
                   <span>タップして拡大 ↗</span>
@@ -954,13 +1027,13 @@ export default function Home() {
             <span className="step-chip">STEP 1</span><h2 id="onboarding-title">あなたは何年生ですか？</h2><p>学年に合わせて、卒業までの冒険マップを準備します。</p>
             <div className="grade-grid">{[1, 2, 3, 4].map((value) => <button key={value} onClick={() => chooseGrade(value)}><strong>{value}</strong><span>年生</span><small>{value === 1 ? "新しい冒険を始める" : "これまでの単位を登録"}</small></button>)}</div>
           </> : onboardingStep === "course" ? <>
-            <button className="back-button" onClick={() => setOnboardingStep("grade")}>← 学年を選び直す</button><span className="step-chip">STEP 2 / 4</span><h2 id="onboarding-title">3年次のコースを選んでください</h2><p>2年後期を終えて3年1〜2タームへ進むと、専門科目の最低単位数がコース別に変わります。</p>
+            <button className="back-button" onClick={returnToGradeSelection}>← 学年選択に戻る</button><span className="step-chip">STEP 2 / 4</span><h2 id="onboarding-title">3年次のコースを選んでください</h2><p>2年後期を終えて3年1〜2タームへ進むと、専門科目の最低単位数がコース別に変わります。</p>
             <div className="course-choice-grid">{(Object.keys(studyCourseLabels) as StudyCourse[]).map((value) => <button type="button" key={value} onClick={() => chooseStudyCourse(value)}><span>{value === "information" ? "1" : "2"}</span><strong>{studyCourseLabels[value]}</strong><small>{value === "information" ? "情報工学基礎13・情報工学専門16単位以上" : "DS基礎12・DS専門22単位以上"}</small></button>)}</div>
           </> : onboardingStep === "term" ? <>
-            <button className="back-button" onClick={() => setOnboardingStep(grade !== null && grade >= 3 ? "course" : "grade")}>← {grade !== null && grade >= 3 ? "コース" : "学年"}を選び直す</button><span className="step-chip">STEP {grade !== null && grade >= 3 ? "3 / 4" : `2 / ${grade === 1 ? 2 : 3}`}</span><h2 id="onboarding-title">現在のタームはどちらですか？</h2><p>挑戦タームを選ぶと、同じ学年の1〜2・4〜5ターム両方へ必修を自動登録します。3年生以上は選択したコースの必修も対象です。</p>
+            <button className="back-button" onClick={returnToGradeSelection}>← 学年選択に戻る</button><span className="step-chip">STEP {grade !== null && grade >= 3 ? "3 / 4" : `2 / ${grade === 1 ? 2 : 3}`}</span><h2 id="onboarding-title">現在のタームはどちらですか？</h2><p>挑戦タームを選ぶと、同じ学年の1〜2・4〜5ターム両方へ必修を自動登録します。3年生以上は選択したコースの必修も対象です。</p>
             <div className="battle-term-choice onboarding-term-choice">{(["first", "second"] as TermGroup[]).map((group) => { const boss = bossFor(grade ?? 1, group); return <button type="button" className={`boss-choice-grade-${boss.grade} boss-choice-term-${boss.termGroup}`} key={group} onClick={() => chooseAdventureTerm(group)}><img src={boss.image} alt={`${boss.name}の姿`} /><span><strong>{termGroupLabel[group]}</strong><small>{boss.title}</small><b>{boss.name}</b><em>{boss.threat}</em></span></button>; })}</div>
           </> : <>
-            <button className="back-button" onClick={() => setOnboardingStep("term")}>← タームを選び直す</button><span className="step-chip">STEP {grade !== null && grade >= 3 ? "4 / 4" : "3 / 3"}</span><h2 id="onboarding-title">これまでに修得した授業を選んでください</h2><p>今の学年・タームより前に履修できた授業を、普遍教育と専門科目の区分ごとに表示しています。同列授業は修得した1クラスだけ選べます。</p>
+            <button className="back-button" onClick={returnToGradeSelection}>← 学年選択に戻る</button><span className="step-chip">STEP {grade !== null && grade >= 3 ? "4 / 4" : "3 / 3"}</span><h2 id="onboarding-title">これまでに修得した授業を選んでください</h2><p>今の学年・タームより前に履修できた授業を、普遍教育と専門科目の区分ごとに表示しています。同列授業は修得した1クラスだけ選べます。</p>
             <form onSubmit={finishPriorCredits} className="prior-course-form">
               <div className="prior-course-search"><span>⌕</span><input type="search" value={priorCourseSearch} onChange={(event) => setPriorCourseSearch(event.target.value)} placeholder="授業名・授業コード・単位区分で検索" aria-label="過去の履修科目を検索" /></div>
               <PriorCourseChecklist courseOptions={priorCourseOptions} selectedKeys={priorCompletedCourseKeys} onToggle={togglePriorCompletedCourse} />

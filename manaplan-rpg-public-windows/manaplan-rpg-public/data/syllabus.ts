@@ -164,26 +164,55 @@ export const creditCategoryForCourse = (course: Pick<Course, "classCode" | "name
   return dataScienceSpecialtyCreditCategories[3];
 };
 
-const linkedSyllabusCategories = new Set([
-  "共通専門基礎科目",
-  "共通専門科目",
+const CHIBA_GENERAL_SYLLABUS_BASE = "https://syllabus.gs.chiba-u.jp/2026/401001000000000";
+const CHIBA_PROFESSIONAL_SYLLABUS_BASE = "https://syllabus.gs.chiba-u.jp/2026/101112101193000";
+const syllabusUrlOverrides = new Map([
+  ["B13B200701", "https://syllabus.gs.chiba-u.jp/2026/101104101000000/B13B200701/ja_JP"],
+]);
+const englishSyllabusCourseNames = new Set(["離散数学", "符号理論"]);
+const professionalSyllabusCategories = new Set([
   "データサイエンス基礎",
   "情報工学基礎",
   "共通専門",
   "データサイエンス専門",
   "情報工学専門",
 ]);
+const generalCommonFoundationCourseNames = new Set([
+  "力学基礎",
+  "力学基礎1",
+  "力学基礎演習",
+  "力学基礎演習1",
+  "電磁気学基礎",
+  "電磁気学基礎1",
+  "電磁気学基礎演習",
+  "電磁気学基礎演習1",
+  "線形代数学B1",
+  "線形代数学B2",
+  "微積分学B1",
+  "微積分学B2",
+  "微積分学演習B1",
+  "微積分学演習B2",
+  "線形代数学演習B1",
+  "線形代数学演習B2",
+]);
 
-const CHIBA_SYLLABUS_BASE = "https://syllabus.gs.chiba-u.jp/2026/101112101193000";
-const CHIBA_ENGLISH_SYLLABUS_BASE = "https://syllabus.gs.chiba-u.jp/2026/401001000000000";
+const normalizedSyllabusCourseName = (name: string) => name
+  .normalize("NFKC")
+  .replace(/\(\s*\d+\s*\)(?:\s*\/.*)?$/u, "")
+  .trim();
 
-export const syllabusUrlForCourse = (course: Pick<Course, "classCode" | "unitCategory">) => {
+export const syllabusUrlForCourse = (course: Pick<Course, "classCode" | "name" | "unitCategory">) => {
   if (!course.classCode) return null;
-  if (course.unitCategory === "英語") {
-    return `${CHIBA_ENGLISH_SYLLABUS_BASE}/${encodeURIComponent(course.classCode)}/en_US`;
-  }
-  if (!linkedSyllabusCategories.has(course.unitCategory)) return null;
-  return `${CHIBA_SYLLABUS_BASE}/${encodeURIComponent(course.classCode)}/ja_JP`;
+  const overrideUrl = syllabusUrlOverrides.get(course.classCode);
+  if (overrideUrl) return overrideUrl;
+  const normalizedName = normalizedSyllabusCourseName(course.name);
+  const language = course.unitCategory === "英語" || englishSyllabusCourseNames.has(normalizedName)
+    ? "en_US"
+    : "ja_JP";
+  const usesProfessionalBase = professionalSyllabusCategories.has(course.unitCategory)
+    || (course.unitCategory === "共通専門基礎科目" && !generalCommonFoundationCourseNames.has(normalizedName));
+  const base = usesProfessionalBase ? CHIBA_PROFESSIONAL_SYLLABUS_BASE : CHIBA_GENERAL_SYLLABUS_BASE;
+  return `${base}/${encodeURIComponent(course.classCode)}/${language}`;
 };
 
 export const formatTermLabel = (term: string) => {

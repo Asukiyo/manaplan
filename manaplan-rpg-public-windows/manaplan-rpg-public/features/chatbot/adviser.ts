@@ -18,6 +18,7 @@ export type AdviserContext = {
   remainingCredits: number;
   registeredCourses: Course[];
   studyCourse: StudyCourse | null;
+  conversation?: string[];
 };
 
 const requirementLabels: Record<RequirementType, string> = {
@@ -31,10 +32,39 @@ const requirementLabels: Record<RequirementType, string> = {
 
 const normalize = (value: string) => value
   .normalize("NFKC")
-  .replace(/[\s　「」『』"']/g, "")
+  .replace(/ウェブ/g, "web")
+  .replace(/[\s　「」『』"'、。！？!?・,，.．:：;；()（）［］【】]/g, "")
   .toLowerCase();
 
 const unique = (values: string[]) => Array.from(new Set(values.filter(Boolean)));
+
+const editDistance = (left: string, right: string) => {
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex++) {
+    const current = [leftIndex];
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex++) {
+      current[rightIndex] = Math.min(
+        current[rightIndex - 1] + 1,
+        previous[rightIndex] + 1,
+        previous[rightIndex - 1] + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1),
+      );
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+  return previous[right.length];
+};
+
+const distanceWithinText = (courseName: string, question: string) => {
+  let best = Number.POSITIVE_INFINITY;
+  const shortest = Math.max(3, courseName.length - 2);
+  const longest = Math.min(question.length, courseName.length + 2);
+  for (let length = shortest; length <= longest; length++) {
+    for (let start = 0; start + length <= question.length; start++) {
+      best = Math.min(best, editDistance(courseName, question.slice(start, start + length)));
+    }
+  }
+  return best;
+};
 
 const scheduleFor = (course: Course) => {
   const period = course.period === null ? "時限未定" : `${course.period}限`;
@@ -54,36 +84,46 @@ const mentionedCourseRows = (question: string) => {
   const normalizedQuestion = normalize(question);
   const names = unique(courses.map((course) => course.name)).sort((left, right) => right.length - left.length);
   const name = names.find((courseName) => normalizedQuestion.includes(normalize(courseName)));
-  return name ? courses.filter((course) => course.name === name) : [];
+  if (name) return courses.filter((course) => course.name === name);
+
+  const fuzzyMatches = names
+    .map((courseName) => ({ courseName, normalizedName: normalize(courseName) }))
+    .filter(({ normalizedName }) => normalizedName.length >= 5 && normalizedQuestion.length >= 3)
+    .map(({ courseName, normalizedName }) => ({ courseName, distance: distanceWithinText(normalizedName, normalizedQuestion) }))
+    .sort((left, right) => left.distance - right.distance);
+  const best = fuzzyMatches[0];
+  const runnerUp = fuzzyMatches[1];
+  if (!best || best.distance > 2 || (runnerUp && runnerUp.distance === best.distance)) return [];
+  return courses.filter((course) => course.name === best.courseName);
 };
 
 const answerCourseQuestion = (question: string, rows: Course[]) => {
   const name = rows[0].name;
   const schedules = unique(rows.map(scheduleFor));
-  const terms = unique(rows.map((course) => `${formatTermLabel(course.term)}（CSV値:${course.term}）`));
+  const terms = unique(rows.map((course) => formatTermLabel(course.term)));
   const credits = unique(rows.map((course) => String(course.credits)));
   const locations = unique(rows.map((course) => course.location || "未定"));
-  const requirements = unique(rows.map((course) => `${requirementLabels[course.requirement]}（コード:${course.requirementCode || "未設定"}）`));
+  const requirements = unique(rows.map((course) => requirementLabels[course.requirement]));
   const categories = unique(rows.map((course) => course.unitCategory));
   const grades = unique(rows.map((course) => course.recommendedGrade ? `${course.recommendedGrade}年` : "対象学年未設定"));
   const classCodes = unique(rows.map((course) => course.classCode || "未設定"));
   const numberingCodes = unique(rows.map((course) => course.numberingCode || "未設定"));
 
-  if (/担当教員|誰が教え|授業内容|何を学|成績評価|配点|欠席|出席条件|教科書|教材|定員|抽選|履修条件|休講|教室変更|オンデマンド/.test(question)) return `現在のCSVには「${name}」のその情報がないため回答できません。詳細シラバスや大学の最新のお知らせを確認してください。`;
-  if (/何曜|何限|いつ/.test(question) && /教室|授業場所|どこ/.test(question)) return `「${name}」は${schedules.join("、")}に開講されます。授業場所は${locations.join("、")}です。`;
-  if (/何曜|何限|いつ/.test(question)) return `「${name}」は${schedules.join("、")}に開講されます。`;
-  if (/ターム/.test(question)) return `「${name}」は${terms.join("、")}です。`;
-  if (/何単位|単位数/.test(question)) return `「${name}」は${credits.join("または")}単位です。`;
-  if (/教室|授業場所|どこ/.test(question)) return locations.every((location) => location === "未定")
-    ? `「${name}」の授業場所は、現在のCSVに登録されていません。詳細シラバスを確認してください。`
-    : `「${name}」の授業場所は${locations.join("、")}です。`;
-  if (/必修/.test(question)) return `「${name}」の必修区分は${requirements.join("、")}です。`;
-  if (/科目区分|どの区分|単位区分/.test(question)) return `「${name}」の科目区分は「${categories.join("、")}」です。`;
-  if (/何年|対象学年|年生向け/.test(question)) return `「${name}」のCSV上の対象学年は${grades.join("、")}です。実際の履修可否は詳細シラバスも確認してください。`;
-  if (/授業コード|class\s*code/i.test(question)) return `「${name}」のClass Codeは${classCodes.join("、")}です。`;
-  if (/ナンバリング|numbering\s*code/i.test(question)) return `「${name}」のNumbering Codeは${numberingCodes.join("、")}です。`;
+  if (/担当教員|誰が教え|授業内容|何を学|成績評価|配点|欠席|出席条件|教科書|教材|定員|抽選|履修条件|休講|教室変更|オンデマンド/.test(question)) return `「${name}」について、その情報はこの案内では確認できません。大学シラバスや最新のお知らせを確認してください。`;
 
-  return `「${name}」はCSV上で${grades.join("、")}向け、${schedules.join("、")}に開講されます。授業場所は${locations.join("、")}、${credits.join("または")}単位、必修区分は${requirements.join("、")}、科目区分は「${categories.join("、")}」です。`;
+  const details: string[] = [];
+  if (/何曜|何限|いつ|時間|曜日|時限/.test(question)) details.push(`${schedules.join("、")}に開講`);
+  if (/ターム/.test(question)) details.push(`開講時期は${terms.join("、")}`);
+  if (/何単位|単位数|単位は|単位と|単位、/.test(question)) details.push(`${credits.join("または")}単位`);
+  if (/教室|授業場所|どこ|場所/.test(question)) details.push(locations.every((location) => location === "未定") ? "授業場所は未登録（大学シラバスを確認してください）" : `授業場所は${locations.join("、")}`);
+  if (/必修/.test(question)) details.push(`必修区分は${requirements.join("、")}`);
+  if (/科目区分|どの区分|単位区分/.test(question)) details.push(`科目区分は「${categories.join("、")}」`);
+  if (/何年|対象学年|年生向け/.test(question)) details.push(`対象学年は${grades.join("、")}`);
+  if (/授業コード|class\s*code/i.test(question)) details.push(`Class Codeは${classCodes.join("、")}`);
+  if (/ナンバリング|numbering\s*code/i.test(question)) details.push(`Numbering Codeは${numberingCodes.join("、")}`);
+  if (details.length > 0) return `「${name}」は、${details.join("、")}です。`;
+
+  return `「${name}」は${grades.join("、")}向けで、${schedules.join("、")}に開講されます。授業場所は${locations.join("、")}、${credits.join("または")}単位、必修区分は${requirements.join("、")}、科目区分は「${categories.join("、")}」です。`;
 };
 
 const answerPartialCourseSearch = (question: string) => {
@@ -95,11 +135,78 @@ const answerPartialCourseSearch = (question: string) => {
   return listCourses(matches, `「${quoted}」に部分一致する授業`);
 };
 
+const answerFilteredCourseSearch = (question: string, context: AdviserContext) => {
+  let matches = courses;
+  const conditions: string[] = [];
+  const weekday = question.match(/([月火水木金土])曜/)?.[1];
+  const period = question.match(/([1-5])限/)?.[1];
+  const singleTerm = question.match(/(?<![-〜~])(10|[1245789])ターム/)?.[1];
+  const firstTerm = /1[-〜~]2ターム|前期/.test(question);
+  const secondTerm = /4[-〜~]5ターム|後期/.test(question);
+  const currentTerm = /今学期|現在のターム|今のターム/.test(question);
+  const targetGrade = question.match(/([1-4])年(?:生|向け)?/)?.[1];
+  const requestedRequirement: RequirementType | null = question.includes("情報工学必修") ? "informationRequired"
+    : question.includes("ds必修") ? "dataScienceRequired"
+      : question.includes("選択必修") ? "selectRequired"
+        : question.includes("必修") ? "required"
+          : question.includes("その他") ? "elective" : null;
+  const requestedCategory = unitCategories.find((category) => question.includes(normalize(category)));
+
+  if (weekday) {
+    matches = matches.filter((course) => course.day === weekday);
+    conditions.push(`${weekday}曜日`);
+  }
+  if (period) {
+    matches = matches.filter((course) => course.period === Number(period));
+    conditions.push(`${period}限`);
+  }
+  if (singleTerm) {
+    const matchingTerms = singleTerm === "1" || singleTerm === "2" ? [singleTerm, "7"] : singleTerm === "4" || singleTerm === "5" ? [singleTerm, "8"] : [singleTerm];
+    matches = matches.filter((course) => matchingTerms.includes(course.term));
+    conditions.push(`${singleTerm}ターム`);
+  } else if (firstTerm || secondTerm || currentTerm) {
+    const group: TermGroup = currentTerm ? context.termGroup : firstTerm ? "first" : "second";
+    matches = matches.filter((course) => courseIsInTermGroup(course, group));
+    conditions.push(group === "first" ? "1〜2ターム" : "4〜5ターム");
+  }
+  if (/集中講義/.test(question)) {
+    matches = matches.filter((course) => course.term === "9" || course.term === "10" || course.day === "集");
+    conditions.push("集中講義");
+  }
+  if (targetGrade) {
+    matches = matches.filter((course) => course.recommendedGrade === Number(targetGrade));
+    conditions.push(`${targetGrade}年生向け`);
+  }
+  if (requestedRequirement) {
+    matches = matches.filter((course) => course.requirement === requestedRequirement);
+    conditions.push(requirementLabels[requestedRequirement]);
+  }
+  if (requestedCategory) {
+    matches = matches.filter((course) => course.unitCategory === requestedCategory);
+    conditions.push(`科目区分「${requestedCategory}」`);
+  }
+
+  if (conditions.length === 0) return null;
+  const asksForCourses = /授業|科目|講義|クエスト|一覧|どれ|教えて|ある|探して|候補/.test(question);
+  if (!asksForCourses && conditions.length < 2) return null;
+  return listCourses(matches, `${conditions.join("・")}に合う授業`);
+};
+
 export function answerAdviser(question: string, context: AdviserContext) {
   const normalized = normalize(question);
   const currentBoss = bossFor(context.grade, context.termGroup);
   if (/卒業研究|時間割外/.test(normalized)) return "4年次の卒業研究Ⅰは1〜2ターム、卒業研究Ⅱは4〜5タームの共通専門・各2単位の必修です。曜日・時限には置かず、時間割の上に「時間割外の4年次必修」として自動登録状況を表示し、学期末の単位奉納には含めます。";
-  const courseRows = mentionedCourseRows(question);
+  let courseRows = mentionedCourseRows(question);
+  const isCourseFollowUp = /^(それ|その授業|この授業)/.test(normalized)
+    || /^(何単位|何曜|何限|どこ|場所)(ですか|なの|か)?$/.test(normalized)
+    || /^(必修|選択必修)(ですか|なの|か)?$/.test(normalized);
+  if (courseRows.length === 0 && isCourseFollowUp) {
+    const history = [...(context.conversation ?? [])].reverse();
+    for (const message of history) {
+      courseRows = mentionedCourseRows(message);
+      if (courseRows.length > 0) break;
+    }
+  }
   if (courseRows.length > 0) return answerCourseQuestion(question, courseRows);
 
   const partialCourseAnswer = answerPartialCourseSearch(question);
@@ -111,7 +218,7 @@ export function answerAdviser(question: string, context: AdviserContext) {
   if (/必修.*(確認|どのよう|どう|自動|登録)|自動.*必修/.test(normalized)) return "学年と現在タームを選ぶと、その学年の1〜2ターム・4〜5ターム両方の必修を自動登録します。1年生は力学基礎も必修で、微積分学演習・線形代数学演習のB1／B2は4科目セットです。2年生の情報工学実験IA・IB・ICもセット、3年次は選択コースの必修とプロジェクト研究を登録します。4年次の卒業研究Ⅰ・Ⅱは曜日・時限を使わない時間割外必修として表示します。";
   if (/(授業|科目).*時間割.*(登録|追加)|時間割.*(登録|追加).*(どう|方法)/.test(normalized)) return "授業検索結果で「＋ クエストを受注」を押してください。登録後は「冒険の時間割」でタームごとに確認できます。";
   if (/時間割.*(どこ|確認)/.test(normalized)) return "画面左の「時間割」、または画面中央の「冒険の時間割」で確認できます。1〜2タームと4〜5タームはタブで切り替えられます。";
-  if (/chatbot|賢者.*(何|役割)|何をしてくれ/.test(normalized)) return "私は履修を支援する賢者です。CSVにある授業の曜日・時限、ターム、単位数、教室、必修区分と、時間割・学期末・RPG機能の使い方を案内できます。";
+  if (/chatbot|賢者.*(何|役割)|何をしてくれ/.test(normalized)) return "私は履修を支援する賢者です。授業の曜日・時限、ターム、単位数、教室、必修区分に加え、時間割・学期末・RPG機能の使い方を案内できます。条件をいくつか組み合わせた質問や、直前の授業についての続きの質問にも対応します。";
 
   if (/数理.*データサイエンス.*展開.*(教養展開|回す|算入)|教養展開.*(超過|余分|数理)/.test(normalized)) return "数理データサイエンス展開科目は最低2単位です。2単位を超えて修得した分は、教養展開の5〜9単位要件へ算入できます。例：数理DS展開を4単位修得した場合、超過2単位を教養展開として扱えます。普遍教育26単位の合計では二重加算しません。";
   if (/call|writing|presentation|英語授業|英語.*自動/.test(normalized)) return "1年生の英語必修は、便宜上CALLを自動登録の対象外にしています。時間割にはWritingとPresentationを、並行クラスからそれぞれ1クラスずつ自動登録します。";
@@ -162,34 +269,8 @@ export function answerAdviser(question: string, context: AdviserContext) {
     return listCourses(candidates, "現在の空き時間に入る候補");
   }
 
-  const weekdayMatch = normalized.match(/([月火水木金土])曜/);
-  if (weekdayMatch && /授業|科目|開講/.test(normalized)) return listCourses(courses.filter((course) => course.day === weekdayMatch[1]), `${weekdayMatch[1]}曜日に開講される授業`);
-  const periodMatch = normalized.match(/([1-5])限/);
-  if (periodMatch && /授業|科目|開講/.test(normalized)) return listCourses(courses.filter((course) => course.period === Number(periodMatch[1])), `${periodMatch[1]}限に開講される授業`);
-  const singleTermMatch = normalized.match(/(?<![-〜~])(10|[1245789])ターム/);
-  if (singleTermMatch && /授業|科目|開講/.test(normalized)) {
-    const term = singleTermMatch[1];
-    const matchingTerms = term === "1" || term === "2" ? [term, "7"] : term === "4" || term === "5" ? [term, "8"] : [term];
-    return listCourses(courses.filter((course) => matchingTerms.includes(course.term)), `${term}タームに開講される授業`);
-  }
-  if (/集中講義/.test(normalized)) return listCourses(courses.filter((course) => course.term === "9" || course.term === "10" || course.day === "集"), "集中講義");
+  const filteredCourseAnswer = answerFilteredCourseSearch(normalized, context);
+  if (filteredCourseAnswer) return filteredCourseAnswer;
 
-  const requestedRequirement = normalized.includes("情報工学必修") ? "informationRequired"
-    : normalized.includes("ds必修") ? "dataScienceRequired"
-      : normalized.includes("選択必修") ? "selectRequired"
-        : normalized.includes("必修") ? "required"
-          : normalized.includes("その他") ? "elective" : null;
-  if (requestedRequirement && /授業|科目|一覧|どれ/.test(normalized)) return listCourses(courses.filter((course) => course.requirement === requestedRequirement), `${requirementLabels[requestedRequirement]}の授業`);
-
-  const requestedCategory = unitCategories.find((category) => normalized.includes(normalize(category)));
-  if (requestedCategory) return listCourses(courses.filter((course) => course.unitCategory === requestedCategory), `科目区分「${requestedCategory}」の授業`);
-
-  const firstTerm = /1[-〜~]2ターム|前期/.test(normalized);
-  const secondTerm = /4[-〜~]5ターム|後期/.test(normalized);
-  if ((firstTerm || secondTerm) && /授業|科目|開講/.test(normalized)) {
-    const group: TermGroup = firstTerm ? "first" : "second";
-    return listCourses(courses.filter((course) => courseIsInTermGroup(course, group)), `${group === "first" ? "1〜2" : "4〜5"}タームに開講される授業`);
-  }
-
-  return "質問を特定できませんでした。授業名と「曜日」「単位」「教室」などを一緒に入力するか、時間割・装備・ボス戦の使い方を質問してください。CSVにない情報は推測しません。";
+  return "うまく質問を特定できませんでした。「火曜3限の必修を教えて」「Webプログラミングの単位と教室は？」「今の時間割に重複はある？」のように聞いてみてください。確認できない内容は大学シラバスや最新のお知らせをご案内します。";
 }

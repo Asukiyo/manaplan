@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./title.css";
 
 export const metadata: Metadata = {
   title: "まなプラン｜卒業クエスト",
