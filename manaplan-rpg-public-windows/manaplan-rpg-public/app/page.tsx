@@ -54,7 +54,9 @@ import { CreditSimulator, QuestionLibrary } from "@/components/chat/AdviserTools
 import {
   evaluateGraduation,
   GRADUATION_CREDITS,
+  PROFESSIONAL_REQUIRED_CREDITS,
   studyCourseLabels,
+  UNIVERSAL_REQUIRED_CREDITS,
   type StudyCourse,
 } from "@/features/credits/graduationRequirements";
 
@@ -902,18 +904,26 @@ export default function Home() {
           <section className="panel graduation-panel" aria-labelledby="graduation-title">
             <div className="graduation-heading">
               <div><span className="eyebrow">GRADUATION ROUTE</span><h2 id="graduation-title">卒業要件・130単位への道</h2><p>130単位だけでなく、必修授業と普遍・専門の各内訳をすべて満たす必要があります。</p></div>
-              <div className={`graduation-total ${graduation.complete ? "complete" : "incomplete"}`}><strong>{graduation.totalCredits} / {GRADUATION_CREDITS}</strong><small>{graduation.complete ? "卒業要件達成" : "卒業要件未達成"}</small>{graduationCleared && <button type="button" onClick={() => setGraduationClearOpen(true)}>✦ クリア演出をもう一度</button>}</div>
+              <div className={`graduation-total ${graduation.complete ? "complete" : "incomplete"}`}><span>総取得単位</span><strong>{graduation.totalCredits}<small> / {GRADUATION_CREDITS}単位</small></strong><i><b style={{ width: `${Math.min((graduation.totalCredits / GRADUATION_CREDITS) * 100, 100)}%` }} /></i><em>{graduation.complete ? "すべての卒業要件を達成" : `卒業単位まであと${Math.max(GRADUATION_CREDITS - graduation.totalCredits, 0)}単位`}</em>{graduationCleared && <button type="button" onClick={() => setGraduationClearOpen(true)}>✦ クリア演出をもう一度</button>}</div>
             </div>
-            {!graduation.complete && <div className={`graduation-warning ${graduation.totalCredits >= GRADUATION_CREDITS ? "credits-complete" : ""}`}><strong>{graduation.totalCredits >= GRADUATION_CREDITS ? "総単位数を満たしても、まだ卒業できません" : "卒業までに未達の条件があります"}</strong><span>{unmetGraduationChecks.slice(0, 4).map((check) => check.label).join("・")}{unmetGraduationChecks.length > 4 ? ` ほか${unmetGraduationChecks.length - 4}件` : ""}</span></div>}
+            <div className="graduation-route-map" aria-label={`卒業には合計${GRADUATION_CREDITS}単位、内訳として普遍教育${UNIVERSAL_REQUIRED_CREDITS}単位と専門科目${PROFESSIONAL_REQUIRED_CREDITS}単位、さらに必修授業と区分別条件の達成が必要です`}>
+              <article className="route-total"><small>卒業に必要な総単位</small><strong>{GRADUATION_CREDITS}<span>単位</span></strong></article>
+              <i aria-hidden="true">＝</i>
+              <div className="route-composition"><article><small>普遍教育</small><strong>{UNIVERSAL_REQUIRED_CREDITS}<span>単位</span></strong></article><b aria-hidden="true">＋</b><article><small>専門科目</small><strong>{PROFESSIONAL_REQUIRED_CREDITS}<span>単位</span></strong></article></div>
+              <i className="route-and" aria-hidden="true">かつ</i>
+              <article className="route-conditions"><small>単位数以外の条件</small><strong>必修{requiredCourseProgress.total}科目</strong><span>＋ 各区分の最低要件</span></article>
+            </div>
+            {!graduation.complete && <div className={`graduation-warning ${graduation.totalCredits >= GRADUATION_CREDITS ? "credits-complete" : ""}`}><div><strong>{graduation.totalCredits >= GRADUATION_CREDITS ? "130単位に到達しても、未達の卒業条件があります" : `卒業までに${unmetGraduationChecks.length}件の条件が未達です`}</strong><small>下の3つの項目を開くと、不足している単位や科目を確認できます。</small></div><div className="graduation-warning-items">{unmetGraduationChecks.slice(0, 4).map((check) => <span key={check.id}>{check.label}</span>)}{unmetGraduationChecks.length > 4 && <span>ほか{unmetGraduationChecks.length - 4}件</span>}</div></div>}
             <div className="graduation-summary">
-              <article><span>普遍教育</span><strong>{graduation.universalCredits} / 26</strong><i><b style={{ width: `${Math.min((graduation.universalCredits / 26) * 100, 100)}%` }} /></i></article>
-              <article><span>専門科目</span><strong>{graduation.professionalCredits} / 104</strong><i><b style={{ width: `${Math.min((graduation.professionalCredits / 104) * 100, 100)}%` }} /></i></article>
+              <article><span>普遍教育の合計</span><strong>{graduation.universalCredits}<small> / {UNIVERSAL_REQUIRED_CREDITS}単位</small></strong><p>あと{Math.max(UNIVERSAL_REQUIRED_CREDITS - graduation.universalCredits, 0)}単位</p><i><b style={{ width: `${Math.min((graduation.universalCredits / UNIVERSAL_REQUIRED_CREDITS) * 100, 100)}%` }} /></i></article>
+              <article><span>専門科目の合計</span><strong>{graduation.professionalCredits}<small> / {PROFESSIONAL_REQUIRED_CREDITS}単位</small></strong><p>あと{Math.max(PROFESSIONAL_REQUIRED_CREDITS - graduation.professionalCredits, 0)}単位</p><i><b style={{ width: `${Math.min((graduation.professionalCredits / PROFESSIONAL_REQUIRED_CREDITS) * 100, 100)}%` }} /></i></article>
+              <article><span>必修授業の個別修得</span><strong>{requiredCourseProgress.completed}<small> / {requiredCourseProgress.total}科目</small></strong><p>未修得{requiredCourseProgress.total - requiredCourseProgress.completed}科目</p><i><b style={{ width: `${requiredCourseProgress.total > 0 ? (requiredCourseProgress.completed / requiredCourseProgress.total) * 100 : 100}%` }} /></i></article>
               <article className="study-course-card"><span>選択コース</span><strong>{studyCourse ? studyCourseLabels[studyCourse] : grade !== null && grade < 3 ? "3年進級時に選択" : "未選択"}</strong>{grade !== null && grade >= 3 && <div>{(Object.keys(studyCourseLabels) as StudyCourse[]).map((value) => <button type="button" className={studyCourse === value ? "active" : ""} key={value} onClick={() => applyStudyCourse(value)}>{studyCourseLabels[value]}</button>)}</div>}</article>
             </div>
             <div className="requirement-groups">
-              <details open><summary>必修授業の修得状況 <span>{requiredCourseProgress.completed}/{requiredCourseProgress.total}</span></summary><RequirementList checks={graduation.mandatoryChecks} /></details>
-              <details><summary>普遍教育の内訳を見る <span>{graduation.universalChecks.filter((check) => check.met).length}/{graduation.universalChecks.length}</span></summary><RequirementList checks={graduation.universalChecks} /></details>
-              <details><summary>専門科目の内訳を見る <span>{graduation.professionalChecks.filter((check) => check.met).length}/{graduation.professionalChecks.length}</span></summary><RequirementList checks={graduation.professionalChecks} /></details>
+              <details open><summary><span><strong>必修授業</strong><small>科目ごとの修得状況</small></span><b>修得 {requiredCourseProgress.completed} / {requiredCourseProgress.total}科目</b></summary><RequirementList checks={graduation.mandatoryChecks} /></details>
+              <details><summary><span><strong>普遍教育</strong><small>英語・国際・地域・教養などの区分別条件</small></span><b>達成 {graduation.universalChecks.filter((check) => check.met).length} / {graduation.universalChecks.length}条件</b></summary><RequirementList checks={graduation.universalChecks} /></details>
+              <details><summary><span><strong>専門科目</strong><small>共通専門基礎・コース別専門などの区分別条件</small></span><b>達成 {graduation.professionalChecks.filter((check) => check.met).length} / {graduation.professionalChecks.length}条件</b></summary><RequirementList checks={graduation.professionalChecks} /></details>
             </div>
           </section>
 
@@ -1196,8 +1206,25 @@ function PriorCourseChecklist({ courseOptions, selectedKeys, onToggle }: {
   })}</div>;
 }
 
-function RequirementList({ checks }: { checks: ReturnType<typeof evaluateGraduation>["universalChecks"] }) {
-  return <div className="requirement-list">{checks.map((check) => <div className={check.met ? "met" : "pending"} key={check.id}><span>{check.met ? "✓" : "○"}</span><div><strong>{check.label}</strong>{check.note && <small>{check.note}</small>}</div><b>{check.current} / {check.target}</b></div>)}</div>;
+type GraduationRequirementCheck = ReturnType<typeof evaluateGraduation>["universalChecks"][number];
+
+function requirementProgressLabel(check: GraduationRequirementCheck) {
+  if (check.met) return "達成";
+  if (check.target === "コースを選択") return "未選択";
+  const minimum = check.target.match(/^(\d+)単位以上$/);
+  if (minimum) return `あと${Math.max(Number(minimum[1]) - check.current, 0)}単位`;
+  const range = check.target.match(/^(\d+)〜(\d+)単位$/);
+  if (range) {
+    if (check.current < Number(range[1])) return `あと${Number(range[1]) - check.current}単位`;
+    if (check.current > Number(range[2])) return "上限を超過";
+  }
+  const allCourses = check.target.match(/^全(\d+)科目$/);
+  if (allCourses) return `あと${Math.max(Number(allCourses[1]) - check.current, 0)}科目`;
+  return "要件を確認";
+}
+
+function RequirementList({ checks }: { checks: GraduationRequirementCheck[] }) {
+  return <div className="requirement-list">{checks.map((check) => <div className={check.met ? "met" : "pending"} key={check.id}><span>{check.met ? "✓" : "○"}</span><div><strong>{check.label}</strong>{check.note && <small>{check.note}</small>}{check.items && check.items.length > 0 && <details className="requirement-missing-details"><summary>未修得科目をすべて見る <b>{check.items.length}科目</b></summary><div>{check.items.map((item) => <span key={item}>{item}</span>)}</div></details>}</div><div className="requirement-progress"><b>{requirementProgressLabel(check)}</b><small>現在 {check.current}／目標 {check.target}</small></div></div>)}</div>;
 }
 
 function BossVisual({ boss }: { boss: SemesterBoss }) {

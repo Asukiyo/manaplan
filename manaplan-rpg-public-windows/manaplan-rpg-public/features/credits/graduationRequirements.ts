@@ -23,6 +23,7 @@ export type RequirementCheck = {
   target: string;
   met: boolean;
   note?: string;
+  items?: string[];
 };
 
 export type GraduationEvaluation = {
@@ -125,14 +126,30 @@ export function evaluateGraduation(
       minimumCheck("information-specialty", "情報工学専門", credit(ledger, "情報工学専門"), 6),
     );
   } else {
-    professionalChecks.push({
-      id: "course-selection",
-      label: "3年次コース選択",
-      current: 0,
-      target: "コースを選択",
-      met: false,
-      note: "2年後期のボス撃破後、3年1〜2タームへ進む際に選択します",
-    });
+    professionalChecks.push(
+      minimumCheck(
+        "ds-specialty-provisional",
+        "データサイエンス専門",
+        dataScienceSpecialtyTotal,
+        12,
+        "コース未選択中の最低基準です。データサイエンスコース選択後は22単位以上になります",
+      ),
+      minimumCheck(
+        "information-specialty-provisional",
+        "情報工学専門",
+        credit(ledger, "情報工学専門"),
+        6,
+        "2年次から履修できます。コース未選択中は最低6単位、情報工学コース選択後は16単位以上です",
+      ),
+      {
+        id: "course-selection",
+        label: "3年次コース選択",
+        current: 0,
+        target: "コースを選択",
+        met: false,
+        note: "2年後期のボス撃破後、3年1〜2タームへ進む際に選択します",
+      },
+    );
   }
 
   professionalChecks.push(minimumCheck("professional-total", "専門科目 合計", professionalCredits, PROFESSIONAL_REQUIRED_CREDITS, "個別最低要件に加えて16単位を選択して修得"));
@@ -144,8 +161,9 @@ export function evaluateGraduation(
     target: `全${requiredCourseProgress.total}科目`,
     met: requiredCourseProgress.completed >= requiredCourseProgress.total,
     note: requiredCourseProgress.missing.length > 0
-      ? `未修得：${requiredCourseProgress.missing.slice(0, 8).join("、")}${requiredCourseProgress.missing.length > 8 ? ` ほか${requiredCourseProgress.missing.length - 8}科目` : ""}`
+      ? `未修得は${requiredCourseProgress.missing.length}科目です。時間割の再履修リストから確認・登録できます。`
       : "すべての必修授業を修得済み",
+    items: requiredCourseProgress.missing,
   }] : [];
 
   return {
