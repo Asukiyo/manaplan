@@ -985,8 +985,8 @@ export default function Home() {
 
           <section className="panel contact-panel" id="contact" aria-labelledby="contact-title">
             <div className="contact-emblem" aria-hidden="true"><span>✉</span><i>✦</i></div>
-            <div className="contact-copy"><span className="eyebrow">MESSAGES ACROSS THE REALMS</span><h2 id="contact-title">異国の勇者からの伝書</h2><p>冒険の途中で見つけた不具合、ほしい機能、賢者への意見を伝書に託してください。届いた声は、まなプラン王国の次のアップデートに役立てます。</p><small>Googleフォームが新しいタブで開きます。回答者にフォームの編集権限は必要ありません。</small></div>
-            <a className="contact-form-link" href={CONTACT_FORM_URL} target="_blank" rel="noopener noreferrer"><span>伝書をしたためる</span><b>お問い合わせフォームへ ↗</b></a>
+            <div className="contact-copy"><span className="eyebrow">MESSAGES ACROSS THE REALMS</span><h2 id="contact-title">先輩勇者への伝書</h2><p>ChatBotに聞いても解決できなかった履修ルールや授業選びの疑問を、実際に履修を経験した先輩へ相談できます。冒険の途中で見つけた不具合、ほしい機能、賢者への意見も伝書に託してください。</p><small>Googleフォームが新しいタブで開きます。相談内容を確認した先輩から回答します。</small></div>
+            <a className="contact-form-link" href={CONTACT_FORM_URL} target="_blank" rel="noopener noreferrer"><span>ChatBotで解決しなかったら</span><b>先輩に相談する ↗</b></a>
           </section>
         </div>
       </div>
