@@ -712,6 +712,19 @@ export default function Home() {
     setNotice(`${rescuedBySage ? "天才賢者の救援により" : "勝利により"}${nextBoss.grade}年生の${termGroupLabel[nextBoss.termGroup]}へ進行しました。未取得科目を再履修用に残し、同学年の両タームへ必修${requiredClasses}科目を自動登録しました`);
   }
 
+  function resetAdventure() {
+    const confirmed = window.confirm(
+      "冒険データをリセットして、最初からやり直しますか？\nこの操作は取り消せません。",
+    );
+    if (!confirmed) return;
+
+    try {
+      window.localStorage.removeItem(SAVE_STORAGE_KEY);
+    } finally {
+      window.location.reload();
+    }
+  }
+
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   if (!saveLoaded) return null;
@@ -737,6 +750,7 @@ export default function Home() {
         <header className="topbar">
           <div className="mobile-brand">✦ まなプラン</div>
           <div className="topbar-status"><span className="level-pill">★ レベル {level}</span><div className="mini-exp"><i style={{ width: `${Math.min((completedCredits / GRADUATION_CREDITS) * 100, 100)}%` }} /></div><small>EXP {completedCredits}</small></div>
+          <button type="button" className="reset-adventure-button" onClick={resetAdventure}>↺ 冒険をリセット</button>
           <button className="notification" onClick={() => setTermPromptOpen(true)} aria-label="学期末イベントを開く">🔔<b>1</b></button>
         </header>
 

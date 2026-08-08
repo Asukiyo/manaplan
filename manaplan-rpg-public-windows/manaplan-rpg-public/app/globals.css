@@ -78,6 +78,11 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .mini-exp { width: 116px; height: 7px; overflow: hidden; border-radius: 10px; background: #e9e3ed; }
 .mini-exp i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #8f65e8, #6335c5); transition: width .6s ease; }
 .topbar-status small { color: #82798a; font-size: 9px; font-weight: 700; }
+.reset-adventure-button {
+  padding: 8px 11px; border: 1px solid #e8c9d0; border-radius: 8px;
+  background: #fff7f9; color: #b5445d; font-size: 10px; font-weight: 800; cursor: pointer;
+}
+.reset-adventure-button:hover { background: #fde8ed; border-color: #dca5b2; }
 .notification { position: relative; width: 37px; height: 37px; border: 1px solid #e8e1ec; border-radius: 50%; background: #fff; cursor: pointer; }
 .notification b { position: absolute; top: -2px; right: -1px; width: 15px; height: 15px; display: grid; place-items: center; border-radius: 50%; background: #dc4e68; color: #fff; font-size: 8px; }
 .main-canvas { max-width: 1300px; margin: 0 auto; padding: 24px 26px 60px; }
@@ -415,6 +420,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 
 @media (max-width: 590px) {
   .topbar-status .level-pill { display: none; }
+  .reset-adventure-button { padding: 7px 8px; font-size: 9px; }
   .hero-panel { min-height: 480px; background-size: 100% 100%, 100% 100%, auto 100%; background-position: center, center, 64% center; }
   .hero-panel::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8,8,23,.65) 0%, transparent 50%, rgba(8,7,19,.78) 100%); }
   .hero-copy { left: 18px; right: 18px; top: 22px; }
