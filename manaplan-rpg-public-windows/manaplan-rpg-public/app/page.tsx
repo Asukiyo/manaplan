@@ -131,6 +131,30 @@ const termsForFilter = (term: string) => term === "7" ? ["7", "1", "2"] : term =
 const termGroupLabel: Record<TermGroup, string> = { first: "1〜2ターム", second: "4〜5ターム" };
 const SECOND_YEAR_PROMOTION_LINE = 65;
 const CONTACT_FORM_URL = "https://docs.google.com/forms/d/1G5JDKzcsD9LUnuXKrE8dO-9dvyyo2TlxdKeIlqEjpWY/viewform?hl=ja";
+
+const courseIsBeforeStartingPoint = (course: Course, grade: number, termGroup: TermGroup) => {
+  const recommendedGrade = course.recommendedGrade ?? 1;
+  return recommendedGrade < grade
+    || (recommendedGrade === grade && termGroup === "second" && termGroupForCourse(course) === "first");
+};
+
+const missingPriorRequiredCourseIds = (
+  grade: number,
+  termGroup: TermGroup,
+  studyCourse: StudyCourse | null,
+  completedFamilies: ReadonlySet<string>,
+) => {
+  const requiredFamilies = new Set(graduationRequiredCourseFamilies(studyCourse).map(courseFamilyKey));
+  const missingFamilies = Array.from(requiredFamilies).filter((family) => !completedFamilies.has(family)
+    && courses.some((course) => courseFamilyKey(course) === family && courseIsBeforeStartingPoint(course, grade, termGroup)));
+
+  return Array.from(new Set(missingFamilies.flatMap((family) => {
+    const priorOffering = courses.find((course) => courseFamilyKey(course) === family
+      && courseIsBeforeStartingPoint(course, grade, termGroup));
+    return priorOffering ? registrationIdsForCourse(priorOffering) : [];
+  })));
+};
+
 const academicGradeOptions: { value: AcademicGrade; label: string; note: string }[] = [
   { value: "S", label: "S", note: "秀・4" },
   { value: "A", label: "A", note: "優・3" },
@@ -184,6 +208,13 @@ export default function Home() {
   const [savedGame, setSavedGame] = useState<PersistedGameState | null>(null);
 
   function applySavedGame(saved: PersistedGameState) {
+    const savedCompletedFamilies = new Set(saved.completedCourseKeys);
+    const priorRetakeIds = saved.grade === null
+      ? []
+      : missingPriorRequiredCourseIds(saved.grade, saved.adventureTermGroup, saved.studyCourse, savedCompletedFamilies);
+    const priorRetakeClassKeys = courses
+      .filter((course) => priorRetakeIds.includes(course.id))
+      .map(courseClassKey);
     setGrade(saved.grade);
     setOnboardingStep(saved.onboardingStep);
     setStudyCourse(saved.studyCourse);
@@ -199,9 +230,9 @@ export default function Home() {
         return course ? /^CALL\(/iu.test(course.name) && !saved.completedCourseKeys.includes(courseFamilyKey(course)) : false;
       })
       : [];
-    setRegistered(Array.from(new Set([...saved.registered, ...callIds])));
+    setRegistered(Array.from(new Set([...saved.registered, ...callIds, ...priorRetakeIds])));
     setCompletedCourseKeys(saved.completedCourseKeys);
-    setFailedCourseKeys(saved.failedCourseKeys);
+    setFailedCourseKeys(Array.from(new Set([...saved.failedCourseKeys, ...priorRetakeClassKeys])));
     setActiveTimetableGroup(saved.activeTimetableGroup);
     setTermPromptOpen(saved.termPromptOpen);
     setCoursePromptOpen(saved.coursePromptOpen);
@@ -542,14 +573,26 @@ export default function Home() {
     event.preventDefault();
     const total = sumLedger(priorFields);
     const completedFamilies = new Set(priorSelectedCourses.map(courseFamilyKey));
+    const priorRetakeIds = missingPriorRequiredCourseIds(grade ?? 1, adventureTermGroup, studyCourse, completedFamilies);
+    const priorRetakeClassKeys = Array.from(new Set(courses
+      .filter((course) => priorRetakeIds.includes(course.id))
+      .map(courseClassKey)));
+    const priorRetakeClasses = uniqueCourseClasses(courses.filter((course) => priorRetakeIds.includes(course.id))).length;
     setCompletedCredits(Math.min(total, GRADUATION_CREDITS));
     setEarnedFields(priorFields);
     setCompletedCourseKeys(Array.from(completedFamilies));
-    setRegistered((current) => current.filter((id) => {
-      const course = courses.find((item) => item.id === id);
-      return !course || !completedFamilies.has(courseFamilyKey(course));
-    }));
+    setFailedCourseKeys(priorRetakeClassKeys);
+    setRegistered((current) => Array.from(new Set([
+      ...current.filter((id) => {
+        const course = courses.find((item) => item.id === id);
+        return !course || !completedFamilies.has(courseFamilyKey(course));
+      }),
+      ...priorRetakeIds,
+    ])));
     setEquipment(unlockedEquipment(priorFields).map((item) => item.id));
+    setNotice(priorRetakeClasses > 0
+      ? `未修得の過去必修${priorRetakeClasses}科目を、再履修として時間割へ自動登録しました`
+      : "過去の必修科目はすべて修得済みです");
     setOnboardingStep("done");
   }
 
@@ -898,12 +941,12 @@ export default function Home() {
               </div>}
               {retakeCourses.length > 0 && <section className="retake-list" aria-labelledby="retake-list-title">
                 <header><div><span>RETRY QUEST</span><h3 id="retake-list-title">再履修リスト</h3></div><strong>{retakeCourses.length}科目</strong></header>
-                <p>学期末に「未取得」だった授業です。修得するまで通常の授業とは分けて表示し、学年が上がってもここから再登録できます。</p>
+                <p>学期末に未取得だった授業と、途中学年から始めた際に修得済みとして選ばれなかった過去の必修です。修得するまでオレンジ色で区別し、時間割へ自動登録します。</p>
                 <div className="retake-list-grid">{retakeCourses.map((course) => {
                   const registeredRetakeCourse = selectedCourseClasses.find((item) => courseFamilyKey(item) === courseFamilyKey(course));
                   const selected = Boolean(registeredRetakeCourse) || registrationIdsForCourse(course).some((id) => registered.includes(id));
                   return <article key={`retake-${course.id}`}>
-                    <span className="retake-status">未取得・再履修待ち</span>
+                    <span className="retake-status">未修得・再履修</span>
                     <h4>{course.name}</h4>
                     <p>{course.recommendedGrade ? `${course.recommendedGrade}年向け・` : ""}{formatTermLabel(course.term)}・{course.credits}単位</p>
                     <div><small>{course.unitCategory}</small><button type="button" className={selected ? "selected" : ""} onClick={() => toggleRegistration(registeredRetakeCourse ?? course)}>{selected ? "✓ 再履修を登録済み" : "↻ 時間割へ再登録"}</button></div>
@@ -969,10 +1012,13 @@ export default function Home() {
               <div className="corner">時限</div>{weekdays.map((day) => <div className="weekday-cell" key={day}>{day}</div>)}
               {periods.map((period) => <div className="period-row" key={period.no}>
                 <div className="time-cell"><strong>{period.no}限</strong><span>{period.time}</span></div>
-                {weekdays.map((day) => <div className="schedule-cell" key={`${day}-${period.no}`}>{scheduledTimetableCourses.filter((course) => course.day === day && course.period === period.no && !concentratedCourses.includes(course)).map((course) => <button className="course-chip" key={course.id} style={{ background: requirementMeta[course.requirement].soft, borderColor: requirementMeta[course.requirement].color }} onClick={() => toggleRegistration(course)} title="クリックで登録解除"><strong>{course.name}</strong><small>{formatTermLabel(course.term)}・{course.credits}単位</small></button>)}</div>)}
+                {weekdays.map((day) => <div className="schedule-cell" key={`${day}-${period.no}`}>{scheduledTimetableCourses.filter((course) => course.day === day && course.period === period.no && !concentratedCourses.includes(course)).map((course) => {
+                  const isRetake = failedCourseFamilies.has(courseFamilyKey(course));
+                  return <button className={`course-chip ${isRetake ? "retake-course-chip" : ""}`} key={course.id} style={{ background: isRetake ? "#fff1df" : requirementMeta[course.requirement].soft, borderColor: isRetake ? "#ed8a3c" : requirementMeta[course.requirement].color }} onClick={() => toggleRegistration(course)} title={isRetake ? "再履修科目・クリックで登録解除" : "クリックで登録解除"}><strong>{course.name}</strong><small>{formatTermLabel(course.term)}・{course.credits}単位{isRetake ? "・再履修" : ""}</small></button>;
+                })}</div>)}
               </div>)}
             </div></div>
-            <div className="concentrated-courses"><strong>{activeTimetableGroup === "first" ? "前期" : "後期"}集中・時限未定</strong>{concentratedCourses.length > 0 ? <div>{concentratedCourses.map((course) => <button key={course.id} onClick={() => toggleRegistration(course)}><span>{course.name}</span><small>{formatTermLabel(course.term)}・{course.credits}単位 ×</small></button>)}</div> : <p>登録されている科目はありません</p>}</div>
+            <div className="concentrated-courses"><strong>{activeTimetableGroup === "first" ? "前期" : "後期"}集中・時限未定</strong>{concentratedCourses.length > 0 ? <div>{concentratedCourses.map((course) => { const isRetake = failedCourseFamilies.has(courseFamilyKey(course)); return <button className={isRetake ? "retake-course-chip" : ""} key={course.id} onClick={() => toggleRegistration(course)}><span>{course.name}</span><small>{formatTermLabel(course.term)}・{course.credits}単位{isRetake ? "・再履修" : ""} ×</small></button>; })}</div> : <p>登録されている科目はありません</p>}</div>
           </section>
 
           <section className="panel equipment-panel" id="equipment">
@@ -1041,7 +1087,7 @@ export default function Home() {
             <button className="back-button" onClick={returnToGradeSelection}>← 学年選択に戻る</button><span className="step-chip">STEP {grade !== null && grade >= 3 ? "3 / 4" : `2 / ${grade === 1 ? 2 : 3}`}</span><h2 id="onboarding-title">現在のタームはどちらですか？</h2><p>挑戦タームを選ぶと、同じ学年の1〜2・4〜5ターム両方へ必修を自動登録します。3年生以上は選択したコースの必修も対象です。</p>
             <div className="battle-term-choice onboarding-term-choice">{(["first", "second"] as TermGroup[]).map((group) => { const boss = bossFor(grade ?? 1, group); return <button type="button" className={`boss-choice-grade-${boss.grade} boss-choice-term-${boss.termGroup}`} key={group} onClick={() => chooseAdventureTerm(group)}><img src={boss.image} alt={`${boss.name}の姿`} /><span><strong>{termGroupLabel[group]}</strong><small>{boss.title}</small><b>{boss.name}</b><em>{boss.threat}</em></span></button>; })}</div>
           </> : <>
-            <button className="back-button" onClick={returnToGradeSelection}>← 学年選択に戻る</button><span className="step-chip">STEP {grade !== null && grade >= 3 ? "4 / 4" : "3 / 3"}</span><h2 id="onboarding-title">これまでに修得した授業を選んでください</h2><p>今の学年・タームより前に履修できた授業を、普遍教育と専門科目の区分ごとに表示しています。同列授業は修得した1クラスだけ選べます。</p>
+            <button className="back-button" onClick={returnToGradeSelection}>← 学年選択に戻る</button><span className="step-chip">STEP {grade !== null && grade >= 3 ? "4 / 4" : "3 / 3"}</span><h2 id="onboarding-title">これまでに修得した授業を選んでください</h2><p>今の学年・タームより前に履修できた授業を表示しています。選ばれなかった過去の必修科目は未修得と判定し、再履修として時間割へ自動登録します。同列授業は修得した1クラスだけ選べます。</p>
             <form onSubmit={finishPriorCredits} className="prior-course-form">
               <div className="prior-course-search"><span>⌕</span><input type="search" value={priorCourseSearch} onChange={(event) => setPriorCourseSearch(event.target.value)} placeholder="授業名・授業コード・単位区分で検索" aria-label="過去の履修科目を検索" /></div>
               <PriorCourseChecklist courseOptions={priorCourseOptions} selectedKeys={priorCompletedCourseKeys} onToggle={togglePriorCompletedCourse} />

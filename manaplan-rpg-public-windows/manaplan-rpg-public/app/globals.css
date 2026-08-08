@@ -301,6 +301,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .course-chip { min-height: 49px; padding: 6px; border: 1px solid; border-radius: 7px; text-align: left; cursor: pointer; }
 .course-chip strong { display: block; font-size: 8px; line-height: 1.4; }
 .course-chip small { display: block; margin-top: 3px; color: #645d69; font-size: 7px; }
+.course-chip.retake-course-chip { border-color: #ed8a3c; background: #fff1df; color: #743d20; box-shadow: inset 3px 0 #ed8a3c; }
+.course-chip.retake-course-chip small { color: #b05c28; font-weight: 850; }
 
 .collection-count { padding: 5px 9px; border-radius: 8px; background: #f0eaff; color: #6842b5; font-size: 9px; font-weight: 900; }
 .equipment-grid { margin-top: 15px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
@@ -547,6 +549,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .concentrated-courses button { padding: 8px; display: flex; flex-direction: column; gap: 3px; border: 1px solid #e3dbe8; border-radius: 8px; background: #fff; text-align: left; cursor: pointer; }
 .concentrated-courses button span { font-size: 9px; font-weight: 800; }
 .concentrated-courses button small, .concentrated-courses p { margin: 0; color: #8b8192; font-size: 8px; }
+.concentrated-courses button.retake-course-chip { border-color: #ed8a3c; background: #fff1df; color: #743d20; box-shadow: inset 3px 0 #ed8a3c; }
+.concentrated-courses button.retake-course-chip small { color: #b05c28; font-weight: 850; }
 .outside-timetable-courses { margin: 12px 0; padding: 14px; display: grid; grid-template-columns: minmax(180px, .85fr) 1.5fr; gap: 12px; border: 1px solid #e4c2d1; border-radius: 12px; background: linear-gradient(135deg, #fff6fa, #f8f3ff); }
 .outside-timetable-courses > div:first-child { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px; }
 .outside-timetable-courses > div:first-child span { color: #b04372; font-size: 7px; font-weight: 950; letter-spacing: .08em; }
